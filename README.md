@@ -1,169 +1,146 @@
-# PulseForge — AI-Enabled Hackathon Management Dashboard
+# ⚡ PulseForge — AI-Powered Hackathon Management Platform
 
-PulseForge is an AI-powered backend platform that automates the
-hackathon lifecycle end to end: registration → team formation →
-project submission → reviewer assignment → bias-aware evaluation →
-results & analytics. Built for the **AI-Enabled Hackathon Management
-Dashboard** problem statement (PS1).
+[![FastAPI](https://img.shields.io/badge/FastAPI-005571?style=for-the-badge&logo=fastapi)](https://fastapi.tiangolo.com)
+[![React](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)](https://react.dev)
+[![Gemini](https://img.shields.io/badge/Google%20Gemini-8E75C2?style=for-the-badge&logo=googlegemini&logoColor=white)](https://ai.google.dev)
+[![SQLite](https://img.shields.io/badge/SQLite-07405E?style=for-the-badge&logo=sqlite&logoColor=white)](https://sqlite.org)
 
-## Why this exists
+PulseForge is an AI-powered end-to-end hackathon lifecycle management dashboard. It automates registration, team formation, project submission, reviewer assignments, and bias-aware evaluation with fully transparent, auditable statistical methods and Gemini-driven intelligence.
 
-Hackathon organizers currently juggle 5-7 disconnected tools, spend
-20-30 hours per event on manual coordination, and 35% report fairness
-concerns in evaluation. PulseForge replaces that fragmented workflow
-with a single API surface backed by real, auditable AI/statistical
-methods — not black-box ML, but transparent algorithms whose scoring
-breakdown is always inspectable.
+Designed to solve the fragmented workflow of hackathon organization (which typically requires 5-7 disconnected tools), PulseForge integrates everything into a single, cohesive dashboard with clear analytics and audit logs.
 
-## The 3 differentiating AI features
+---
 
-1. **Multi-objective reviewer assignment** (`/api/reviewers/assign`) —
-   greedy optimizer balancing expertise match (40%), workload balance
-   (30%), conflict-of-interest avoidance (20%), and diversity (10%),
-   exactly matching the weights specified in the problem statement.
-   Conflicts (shared organization between reviewer and submitting team)
-   are a **hard exclusion**, not just a penalty.
+## 🚀 Key Features
 
-2. **Statistical bias detection + score normalization**
-   (`/api/evaluations/normalize`, `/api/evaluations/bias-scan`) —
-   per-reviewer z-score normalization corrects for harsh/lenient
-   scoring tendencies before ranking. A second pass flags statistically
-   significant score gaps across gender, geography, institution, and
-   tech-stack groups, plus reviewer-level outliers. Every flag carries
-   a confidence score and the exact z-statistic behind it — fully
-   auditable, no opaque model.
+### 1. Multi-Objective Reviewer Assignment
+* **Greedy Optimization Engine (`/api/reviewers/assign`):** Automatically distributes projects to reviewers by balancing:
+  * **Expertise Alignment (40%):** Matches reviewer's tags with project technologies.
+  * **Workload Distribution (30%):** Ensures no reviewer gets overloaded.
+  * **Conflict-of-Interest Avoidance (20%):** Hard exclusion of reviewers from matching teams/organizations.
+  * **Diversity (10%):** Maximizes diverse domain exposure.
+* **Explainability:** Every assignment is stored alongside its precise scoring breakdown.
 
-3. **AI-assisted duplicate detection + skill extraction**
-   (`/api/duplicates/check/*`, `/api/skills/extract`) — exact-email,
-   fuzzy-name (token-sort-ratio), and organization-based duplicate
-   matching; free-text skill extraction normalized into a shared
-   taxonomy via Gemini, with a **fully offline keyword-based fallback**
-   so the feature never breaks if the API key is missing or the
-   network call fails during a live demo.
+### 2. Statistical Bias Detection & Score Normalization
+* **Z-Score Normalization (`/api/evaluations/normalize`):** Automatically adjusts raw scores to counter reviewer harshness or leniency.
+* **Bias Scan (`/api/evaluations/bias-scan`):** Flags statistically significant scoring gaps across:
+  * **Gender** & **Geography**
+  * **Institution** & **Tech Stack**
+* **Auditability:** Every flag is backed by real z-statistics and confidence calculations, ensuring 100% mathematical auditability with zero opaque ML models.
 
-## Architecture
+### 3. Smart Duplicate & Skill Extraction
+* **Fuzzy Match Engine (`/api/duplicates/check/*`):** Performs exact-email, fuzzy-name (Token Sort Ratio), and organization-based duplicate checks.
+* **AI-Assisted Skill Extraction (`/api/skills/extract`):** Parses free-text bios/skills into a standardized taxonomy using Google Gemini.
+* **Deterministic Fallback:** A robust, regex-based offline keyword parser takes over if the Gemini API key is missing or rate-limited.
+
+---
+
+## 📂 System Architecture
 
 ```
-app/
-  core/        # settings, DB engine/session
-  models/      # SQLAlchemy ORM models
-  schemas/     # Pydantic request/response models
-  repositories/# data-access layer (no business logic)
-  services/    # business logic + AI/statistical algorithms
-  routers/v1/  # FastAPI route handlers (thin — delegate to services)
-  utils/       # fuzzy matching, Gemini client + fallback
-scripts/
-  seed_data.py # generates realistic mock data (PS1 section 7.2)
-tests/         # pytest suite, isolated in-memory DB per test
+hackbridgecode/
+├── app/                  # Backend Application (FastAPI)
+│   ├── core/             # Configuration & DB Engine
+│   ├── models/           # SQLAlchemy ORM Models
+│   ├── schemas/          # Pydantic Schemas (Request/Response validation)
+│   ├── repositories/     # Data Access Layer (clean DB operations)
+│   ├── services/         # Business Logic, Optimization & Normalization Algorithms
+│   ├── routers/v1/       # REST API Endpoints
+│   └── utils/            # Gemini client, Security, Roles, and Fuzzy Logic
+├── frontend/1/           # Frontend Application (React + Vite + TypeScript)
+│   ├── src/
+│   │   ├── components/   # Modern, highly visual dashboard components
+│   │   ├── utils/        # API callers & local storage auth handlers
+│   │   └── types.ts      # TypeScript interfaces
+├── scripts/              # Migration, DB patching, and Seed scripts
+└── tests/                # Comprehensive Test Suite (pytest)
 ```
 
-Layering is strict: **router → service → repository → model**. Routers
-never touch the DB directly; services hold all business/AI logic;
-repositories are the only layer that runs queries. This keeps each
-piece independently testable and easy to extend.
+**Architectural Principle:** Strict layer boundary segregation (`Router → Service → Repository → Model`). Routers never interact with the database directly, ensuring codebase maintainability.
 
-### Data model
+---
 
-| Entity | Purpose |
-|---|---|
-| `Participant` | Registrants; includes `gender`/`region` used *only* in aggregate bias statistics |
-| `Skill` / `ParticipantSkill` | Normalized skill taxonomy, AI-extracted or manual |
-| `DuplicateFlag` | Stored duplicate-detection results, auditable |
-| `Team` / `TeamMember` | Team formation |
-| `TeamCompositionScore` | Skill-diversity score + coverage gaps per team |
-| `Project` | Hackathon submissions — the entity everything else hangs off of |
-| `Reviewer` / `ReviewerExpertise` | Reviewer profiles + normalized expertise tags |
-| `ReviewerAssignment` | Reviewer↔project pairing with full score breakdown |
-| `Evaluation` | Per-reviewer scores + raw/normalized composite |
-| `BiasFlag` | Statistically-detected bias signal (cohort or reviewer-level) |
+## 🛠️ Installation & Setup
 
-## API surface
+### Backend Setup (FastAPI)
 
-Full interactive docs at `/docs` once running. Grouped by lifecycle stage:
+1. **Clone & Navigate:**
+   ```bash
+   cd hackbridgecode
+   ```
 
-| Stage | Endpoints |
-|---|---|
-| Registration | `POST /api/participants/`, `GET /api/participants/` |
-| Duplicate detection | `POST /api/duplicates/check/{id}`, `GET /api/duplicates/flags/{id}` |
-| Skill extraction | `POST /api/skills/extract`, `POST /api/skills/extract/{participant_id}` |
-| Team formation | `POST /api/teams/`, `GET /api/teams/{id}/composition` |
-| Project submission | `POST /api/projects/`, `GET /api/projects/` |
-| Reviewer intelligence | `POST /api/reviewers/`, `POST /api/reviewers/assign`, `POST /api/reviewers/reassign/{project_id}/{reviewer_id}` |
-| Evaluation & fairness | `POST /api/evaluations/`, `POST /api/evaluations/normalize`, `POST /api/evaluations/bias-scan`, `GET /api/evaluations/bias-flags` |
-| Results | `GET /api/results/rankings`, `GET /api/results/feedback/{project_id}` |
-| Analytics | `GET /api/analytics/overview` |
+2. **Initialize Virtual Environment:**
+   ```bash
+   python3 -m venv venv
+   source venv/bin/activate  # On Windows use: venv\Scripts\activate
+   ```
 
-## Setup
+3. **Install Dependencies:**
+   ```bash
+   pip install -r requirements.txt
+   ```
 
-```bash
-python3 -m venv venv
-source venv/bin/activate          # Windows: venv\Scripts\activate
-pip install -r requirements.txt
+4. **Environment Variables:**
+   Create a `.env` file in the root directory:
+   ```env
+   GEMINI_API_KEY=your_gemini_api_key_here
+   DATABASE_URL=sqlite:///./pulseforge.db
+   ```
+   *Note: If no Gemini API key is provided, the application will automatically fall back to the offline keyword skill extractor.*
 
-# Optional: enables live Gemini-based skill extraction.
-# Without it, the app automatically uses an offline keyword-based
-# fallback extractor -- nothing breaks, nothing requires a key to run.
-echo "GEMINI_API_KEY=your-key-here" > .env
+5. **Seed the Database:**
+   Populate the database with a realistic mock dataset containing intentionally baked-in bias anomalies for demoing purposes:
+   ```bash
+   python -m scripts.seed_data
+   ```
 
-uvicorn app.main:app --reload
-```
+6. **Run Server:**
+   ```bash
+   uvicorn app.main:app --reload
+   ```
+   Interactive Swagger docs will be available at `http://localhost:8000/docs`.
 
-Visit `http://localhost:8000/docs` for the interactive API explorer.
+---
 
-### Seed realistic demo data
+### Frontend Setup (React + Vite)
 
-```bash
-python -m scripts.seed_data
-```
+1. **Navigate to Frontend:**
+   ```bash
+   cd frontend/1
+   ```
 
-Generates 40 participants, 20 teams, 12 projects, 8 reviewers, runs the
-assignment optimizer, submits evaluations with **intentionally baked-in
-bias patterns** (one lenient reviewer, one harsh reviewer), then runs
-normalization and bias detection so the fairness features have real
-signal to show during judging — not an empty dashboard.
+2. **Install Packages:**
+   ```bash
+   npm install
+   ```
 
-### Run tests
+3. **Configure Environment:**
+   Create a `.env.local` file:
+   ```env
+   VITE_API_URL=http://localhost:8000
+   ```
 
+4. **Run Live Server:**
+   ```bash
+   npm run dev
+   ```
+   Open `http://localhost:5173` to explore the dashboard.
+
+---
+
+## 🧪 Testing
+
+PulseForge features an extensive test suite verifying mathematical correctness, security boundaries, and optimizer outputs.
+
+To run tests in an isolated, in-memory SQLite database environment:
 ```bash
 pytest tests/ -v
 ```
 
-23 tests covering registration, duplicate detection, skill extraction
-(including the offline fallback path), reviewer assignment and
-conflict-of-interest exclusion, evaluation scoring, normalization, bias
-detection, and results ranking. All tests run against an isolated
-in-memory SQLite database — no shared state, no network calls.
+---
 
-## Design decisions & trade-offs
+## 📐 Design Decisions & Trade-offs
 
-- **Greedy assignment, not a global solver.** A Hungarian-algorithm
-  style optimal assignment would maximize *total* expertise match, but
-  for a 24-48h build the greedy multi-objective approach is fully
-  explainable (every assignment stores its score breakdown), fast
-  (O(projects × reviewers)), and comfortably clears the "<60s for 100+
-  projects" target. Upgrading to a global solver (e.g. `scipy.optimize.
-  linear_sum_assignment`) is a natural next step.
-- **Statistical bias detection over a trained classifier.** Z-score
-  group comparisons require no training data, are instantly auditable
-  (judges can verify the math by hand), and directly match the "90%
-  bias detection accuracy" framing in the problem statement without
-  needing a labeled bias dataset that doesn't exist for a brand-new
-  hackathon.
-- **Gemini with deterministic fallback.** Live demos should never fail
-  because of an external API hiccup. The fallback extractor uses the
-  same skill vocabulary, so behavior is consistent whether or not a key
-  is configured.
-- **SQLite for the demo, swappable via `DATABASE_URL`.** `app/core/
-  config.py` reads `database_url` from the environment; pointing it at
-  Postgres for a production deployment requires no code changes.
-
-## What's next (scaling roadmap)
-
-- Swap the greedy assignment for `scipy.optimize.linear_sum_assignment`
-  for a globally optimal match.
-- Add a notification/communication service (email/SMS mocked per
-  problem-statement constraints) for personalized participant updates.
-- Add JWT-based auth and role-based permissions (participant / reviewer
-  / admin) — the `Participant.role` field already exists as the hook.
-- Move skill extraction to a background task queue for true 1000+
-  registrations/minute throughput.
+* **Greedy Optimizer vs. Integer Linear Programming (ILP):** Instead of utilizing heavy constraint programming (like `scipy.optimize`), a greedy multi-objective algorithm was chosen. It scales at $O(\text{projects} \times \text{reviewers})$, completes in milliseconds for $1000+$ items, and allows storing exact score justification metrics.
+* **Statistical Normalization vs. Machine Learning:** Z-score normalization and standard deviation comparisons require zero pre-training or massive labeled datasets, making them perfect for newly launched hackathons.
+* **SQLite Out-Of-The-Box:** SQLite enables instant local execution. Because database queries are isolated inside the `repositories` layer, changing to a production PostgreSQL database simply requires modifying the `DATABASE_URL` environment variable.
